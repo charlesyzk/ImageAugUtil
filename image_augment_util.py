@@ -11,7 +11,7 @@ from PIL import Image
 import os
 
 
-class ImageAugment(object):
+class ImageAugmentUtils(object):
 
     @classmethod
     def image_read(cls, image_path: str):
@@ -314,4 +314,4 @@ if __name__ == '__main__':
     # augmented_image_name = augment_image_filename(image_path, "aug")
     #
     # print("Augmented image name:", augmented_image_name)
-    ImageAugment.random_combination_augment("./1.jpg")
+    ImageAugmentUtils.random_combination_augment("./1.jpg")
