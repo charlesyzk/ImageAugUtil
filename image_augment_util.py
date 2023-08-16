@@ -7,15 +7,16 @@ import cv2
 import numpy as np
 import copy
 import random
-from PIL import Image
+# from PIL import Image
 import os
 
 
-class ImageAugmentUtils(object):
+class ImageAugment(object):
 
     @classmethod
     def image_read(cls, image_path: str):
         try:
+            # return cv2.cvtColor(cv2.imread(image_path),cv2.COLOR_BGR2RGB)
             return cv2.imread(image_path)
         except Exception as e:
             print(e)
@@ -199,32 +200,29 @@ class ImageAugmentUtils(object):
         bright_img = np.clip(image * factor, 0, 255).astype(np.uint8)
         if mode == "notes":
             random_bright_notes = copy.deepcopy(notes)
-            return Image.fromarray(bright_img), random_bright_notes
+            return bright_img, random_bright_notes
         elif mode == 'img':
-            return Image.fromarray(bright_img)
+            return bright_img
 
     @classmethod
     def random_saturation(cls, image, mode: str = "img", notes: [[dict]] = None, lower=0.5, upper=1.5):
-        # -------------------------------------------------------------
-        # 随机饱和度变换，针对彩色三通道图像，中间通道乘以一个值
-        # -------------------------------------------------------------
-        img_np = np.array(image) / 255.0  # 转换为NumPy数组并进行归一化
         if np.random.random() > 0.5:
             alpha = np.random.uniform(lower, upper)
-            img_np[:, :, 1] = img_np[:, :, 1] * alpha
-            img_np[:, :, 1] = np.clip(img_np[:, :, 1], 0.0, 1.0)  # 对像素值进行裁剪，确保在合理范围内
-        img_np = (img_np * 255).astype(np.uint8)  # 将数组转换为8位整型
+            image[:, :, 1] = image[:, :, 1] * alpha 
+            image[:, :, 1] = np.clip(image[:, :, 1], 0, 255).astype(np.uint8)  # 对像素值进行裁剪，确保在合理范围内
         if mode == 'notes' and notes is None:
             raise ValueError("When mode is set to 'notes', you must provide notes data.")
         elif mode == 'notes':
             random_saturation_notes = copy.deepcopy(notes)
-            return Image.fromarray(img_np).convert('RGB'), random_saturation_notes
+            return image, random_saturation_notes
         elif mode == 'img':
-            return Image.fromarray(img_np)
+            return image
+
 
     @classmethod
     def convert_to_grayscale(cls, image, mode: str = "img", notes: [[dict]] = None):
-        grayscale_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        image_np = np.array(image)
+        grayscale_image = cv2.cvtColor(image_np, cv2.COLOR_BGR2GRAY)
         if mode == 'notes' and notes is None:
             raise ValueError("When mode is set to 'notes', you must provide notes data.")
         elif mode == 'notes':
@@ -235,58 +233,47 @@ class ImageAugmentUtils(object):
 
     @classmethod
     def random_combination_augment(cls, image_path: str, mode: str = "img", notes: [[dict]] = None, num_calls: int = 1):
+        aug_image_name = augment_image_filename(image_path=image_path)
         image = cls.image_read(image_path)
-        for _ in range(num_calls):
-            aug_image_name = augment_image_filename(image_path=image_path,suffix='aug_'+str(_))
-            augmentations_candidates_func = [cls.image_rotate_90_counterclockwise, cls.image_rotate_180,
-                                             cls.image_rotate_90_clockwise, cls.resize_image, cls.add_gaussian_noise,
-                                             cls.add_salt_and_pepper_noise]
-            selected_augmentations1 = random.sample(augmentations_candidates_func,
-                                                    k=random.randint(1, len(augmentations_candidates_func)))
+        # cv2.imwrite('0.jpg',image)
+        augmentations_candidates_func1 = [
+            cls.image_rotate_90_counterclockwise, cls.image_rotate_180,
+            cls.image_rotate_90_clockwise, cls.resize_image, cls.add_gaussian_noise,
+            cls.add_salt_and_pepper_noise
+        ]
+        augmentations_candidates_func2 = [cls.random_bright, cls.random_saturation]
+        augmentations_candidates_func3 = [cls.convert_to_grayscale]
 
-            augmentations_candidates_func2 = [cls.random_bright, cls.random_saturation]
+        for _ in range(num_calls):
+            selected_augmentations1 = random.sample(augmentations_candidates_func1,
+                                                    k=random.randint(1, len(augmentations_candidates_func1)))
             selected_augmentations2 = random.sample(augmentations_candidates_func2,
                                                     k=random.randint(0, len(augmentations_candidates_func2)))
-
-            augmentations_candidates_func3 = [cls.convert_to_grayscale]
             selected_augmentations3 = random.sample(augmentations_candidates_func3,
                                                     k=random.randint(0, len(augmentations_candidates_func3)))
 
             augmented_image, augmented_notes = image, notes
+
             if mode == 'notes' and notes is None:
                 raise ValueError("When mode is set to 'notes', you must provide notes data.")
             elif mode == 'notes':
-                for augmentation in selected_augmentations1:
+                for augmentation in selected_augmentations1 + selected_augmentations2 + selected_augmentations3:
                     augmented_image, augmented_notes = augmentation(image=augmented_image, mode=mode,
                                                                     notes=augmented_notes)
+                # if isinstance(augmented_image, Image.Image):
+                #     augmented_image = np.array(augmented_image)  
 
-                if len(selected_augmentations3) > 0:
-                    for augmentation in selected_augmentations3:
-                        augmented_image, augmented_notes = augmentation(image=augmented_image, mode=mode,
-                                                                        notes=augmented_notes)
-                    cv2.imwrite(aug_image_name, augmented_image)
-                elif len(selected_augmentations2) > 0:
-                    for augmentation in selected_augmentations2:
-                        augmented_image, augmented_notes = augmentation(image=augmented_image, mode=mode,
-                                                                        notes=augmented_notes)
-                    augmented_image.save(aug_image_name)
-                else:
-                    cv2.imwrite(aug_image_name, augmented_image)
+                cv2.imwrite(aug_image_name, augmented_image)
                 return aug_image_name, augmented_notes
             elif mode == 'img':
-                for augmentation in selected_augmentations1:
+                for augmentation in selected_augmentations1 + selected_augmentations2 + selected_augmentations3:
+                    print(augmentation)
                     augmented_image = augmentation(image=augmented_image, mode=mode)
 
-                if len(selected_augmentations3) > 0:
-                    for augmentation in selected_augmentations3:
-                        augmented_image = augmentation(image=augmented_image, mode=mode)
-                    cv2.imwrite(aug_image_name, augmented_image)
-                elif len(selected_augmentations2) > 0:
-                    for augmentation in selected_augmentations2:
-                        augmented_image = augmentation(image=augmented_image, mode=mode)
-                    augmented_image.save(aug_image_name)
-                else:
-                    cv2.imwrite(aug_image_name, augmented_image)
+                # if isinstance(augmented_image, Image.Image):
+                #     augmented_image = np.array(augmented_image)  
+
+                cv2.imwrite(aug_image_name, augmented_image)
                 return aug_image_name
 
 
@@ -314,4 +301,13 @@ if __name__ == '__main__':
     # augmented_image_name = augment_image_filename(image_path, "aug")
     #
     # print("Augmented image name:", augmented_image_name)
-    ImageAugmentUtils.random_combination_augment("./1.jpg")
+    ImageAugment.random_combination_augment("./1.jpg")
+
+    # cv2.imwrite('/2.jpg',ImageAugment.random_bright(ImageAugment.image_read('./1.jpg')))
+   
+    # ImageAugment.random_bright(ImageAugment.image_read('./1.jpg')).save('./3.jpg')
+    # ImageAugment.random_saturation(ImageAugment.image_read('./1.jpg')).save('./4.jpg')
+    # ImageAugment.resize_image(ImageAugment.image_read('./1.jpg')).save('./5.jpg')
+    cv2.imwrite('./5.jpg',ImageAugment.resize_image(ImageAugment.image_read('./1.jpg')))
+    cv2.imwrite('./3.jpg',ImageAugment.random_bright(ImageAugment.image_read('./1.jpg')))
+    cv2.imwrite('./4.jpg',ImageAugment.random_saturation(ImageAugment.image_read('./1.jpg')))
