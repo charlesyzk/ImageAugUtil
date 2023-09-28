@@ -9,6 +9,8 @@ import copy
 import random
 # from PIL import Image
 import os
+import random
+from typing import List,Dict
 
 
 class ImageAugment(object):
@@ -23,7 +25,7 @@ class ImageAugment(object):
             return None
 
     @classmethod
-    def image_rotate_90_clockwise(cls, image, mode: str = "img", notes: [[dict]] = None):
+    def image_rotate_90_clockwise(cls, image, mode: str = "img", notes: List[Dict] = None):
         rotated_image = cv2.rotate(image, cv2.ROTATE_90_CLOCKWISE)
         rotated_height, rotated_width = rotated_image.shape[:2]
 
@@ -49,7 +51,7 @@ class ImageAugment(object):
             return rotated_image
 
     @classmethod
-    def image_rotate_180(cls, image, mode: str = "img", notes: [[dict]] = None):
+    def image_rotate_180(cls, image, mode: str = "img", notes: List[Dict] = None):
         rotated_image = cv2.rotate(image, cv2.ROTATE_180)
         rotated_height, rotated_width = rotated_image.shape[:2]
         if mode == 'notes' and notes is None:
@@ -73,7 +75,7 @@ class ImageAugment(object):
             return rotated_image
 
     @classmethod
-    def image_rotate_90_counterclockwise(cls, image, mode: str = "img", notes: [[dict]] = None):
+    def image_rotate_90_counterclockwise(cls, image, mode: str = "img", notes: List[Dict] = None):
         rotated_image = cv2.rotate(image, cv2.ROTATE_90_COUNTERCLOCKWISE)
         rotated_height, rotated_width = rotated_image.shape[:2]
         if mode == 'notes' and notes is None:
@@ -96,7 +98,7 @@ class ImageAugment(object):
             return rotated_image
 
     @classmethod
-    def resize_image(cls, image, mode: str = "img", notes: [[dict]] = None, scale_percent: int = None):
+    def resize_image(cls, image, mode: str = "img", notes: List[Dict] = None, scale_percent: int = None):
         if scale_percent is None:
             scale_percent = random.randrange(30, 80)
         width = int(image.shape[1] * scale_percent / 100)
@@ -124,7 +126,7 @@ class ImageAugment(object):
             return resized_image
 
     @classmethod
-    def add_gaussian_noise(cls, image, mode: str = "img", notes: [[dict]] = None, mean=70, std=20):
+    def add_gaussian_noise(cls, image, mode: str = "img", notes: List[Dict] = None, mean=70, std=20):
         noise = np.random.normal(mean, std, image.shape).astype(np.uint8)
         noisy_image = cv2.add(image, noise)
         if mode == 'notes' and notes is None:
@@ -136,7 +138,7 @@ class ImageAugment(object):
             return noisy_image
 
     @classmethod
-    def add_salt_and_pepper_noise(cls, image, mode: str = "img", notes: [[dict]] = None, salt_ratio=0.01,
+    def add_salt_and_pepper_noise(cls, image, mode: str = "img", notes: List[Dict] = None, salt_ratio=0.01,
                                   pepper_ratio=0.01):
         noisy_image = np.copy(image)
         height, width = image.shape[:2]
@@ -152,12 +154,12 @@ class ImageAugment(object):
             raise ValueError("When mode is set to 'notes', you must provide notes data.")
         elif mode == 'notes':
             salt_pepper_notes = copy.deepcopy(notes)
-            return noisy_image, salt_pepper_notes.notes
+            return noisy_image, salt_pepper_notes
         elif mode == 'img':
             return noisy_image
 
     # @classmethod
-    # def add_pepper_and_salt_noise(cls, image, mode: str = "img", notes: [[dict]] = None, pepper_ratio=0.01,
+    # def add_pepper_and_salt_noise(cls, image, mode: str = "img", notes: List[Dict] = None, pepper_ratio=0.01,
     #                               salt_ratio=0.01):
     #     noisy_image = np.copy(image)
     #     height, width = image.shape[:2]
@@ -173,12 +175,12 @@ class ImageAugment(object):
     #
     #     if mode == "notes":
     #         salt_pepper_notes = copy.deepcopy(notes)
-    #         return noisy_image, salt_pepper_notes.notes
+    #         return noisy_image, salt_pepper_notes
     #     elif mode == 'img':
     #         return noisy_image
 
     # @classmethod
-    # def random_bright(cls, image, mode: str = "img", notes: [[dict]] = None, u=32):
+    # def random_bright(cls, image, mode: str = "img", notes: List[Dict] = None, u=32):
     #     img_np = np.array(image) / 255.0  # 转换为NumPy数组并进行归一化
     #     if np.random.random() > 0.5:
     #         alpha = np.random.uniform(-u, u) / 255
@@ -195,7 +197,7 @@ class ImageAugment(object):
     #         return Image.fromarray(img_np)
 
     @classmethod
-    def random_bright(cls, image, mode: str = "img", notes: [[dict]] = None, lower=0.5, upper=1.5):
+    def random_bright(cls, image, mode: str = "img", notes: List[Dict] = None, lower=0.5, upper=1.5):
         factor = np.random.uniform(lower, upper)
         bright_img = np.clip(image * factor, 0, 255).astype(np.uint8)
         if mode == "notes":
@@ -205,10 +207,10 @@ class ImageAugment(object):
             return bright_img
 
     @classmethod
-    def random_saturation(cls, image, mode: str = "img", notes: [[dict]] = None, lower=0.5, upper=1.5):
+    def random_saturation(cls, image, mode: str = "img", notes: List[Dict] = None, lower=0.5, upper=1.5):
         if np.random.random() > 0.5:
             alpha = np.random.uniform(lower, upper)
-            image[:, :, 1] = image[:, :, 1] * alpha 
+            image[:, :, 1] = image[:, :, 1] * alpha
             image[:, :, 1] = np.clip(image[:, :, 1], 0, 255).astype(np.uint8)  # 对像素值进行裁剪，确保在合理范围内
         if mode == 'notes' and notes is None:
             raise ValueError("When mode is set to 'notes', you must provide notes data.")
@@ -218,9 +220,8 @@ class ImageAugment(object):
         elif mode == 'img':
             return image
 
-
     @classmethod
-    def convert_to_grayscale(cls, image, mode: str = "img", notes: [[dict]] = None):
+    def convert_to_grayscale(cls, image, mode: str = "img", notes: List[Dict] = None):
         image_np = np.array(image)
         grayscale_image = cv2.cvtColor(image_np, cv2.COLOR_BGR2GRAY)
         if mode == 'notes' and notes is None:
@@ -232,7 +233,7 @@ class ImageAugment(object):
             return grayscale_image
 
     @classmethod
-    def random_combination_augment(cls, image_path: str, mode: str = "img", notes: [[dict]] = None, num_calls: int = 1):
+    def random_combination_augment(cls, image_path: str, mode: str = "img", notes: List[Dict] = None):
         aug_image_name = augment_image_filename(image_path=image_path)
         image = cls.image_read(image_path)
         # cv2.imwrite('0.jpg',image)
@@ -244,52 +245,55 @@ class ImageAugment(object):
         augmentations_candidates_func2 = [cls.random_bright, cls.random_saturation]
         augmentations_candidates_func3 = [cls.convert_to_grayscale]
 
-        for _ in range(num_calls):
-            selected_augmentations1 = random.sample(augmentations_candidates_func1,
-                                                    k=random.randint(1, len(augmentations_candidates_func1)))
-            selected_augmentations2 = random.sample(augmentations_candidates_func2,
-                                                    k=random.randint(0, len(augmentations_candidates_func2)))
-            selected_augmentations3 = random.sample(augmentations_candidates_func3,
-                                                    k=random.randint(0, len(augmentations_candidates_func3)))
+        selected_augmentations1 = random.sample(augmentations_candidates_func1,
+                                                k=random.randint(1, len(augmentations_candidates_func1)))
+        selected_augmentations2 = random.sample(augmentations_candidates_func2,
+                                                k=random.randint(0, len(augmentations_candidates_func2)))
+        selected_augmentations3 = random.sample(augmentations_candidates_func3,
+                                                k=random.randint(0, len(augmentations_candidates_func3)))
 
-            augmented_image, augmented_notes = image, notes
+        augmented_image, augmented_notes = image, notes
 
-            if mode == 'notes' and notes is None:
-                raise ValueError("When mode is set to 'notes', you must provide notes data.")
-            elif mode == 'notes':
-                for augmentation in selected_augmentations1 + selected_augmentations2 + selected_augmentations3:
-                    augmented_image, augmented_notes = augmentation(image=augmented_image, mode=mode,
-                                                                    notes=augmented_notes)
-                # if isinstance(augmented_image, Image.Image):
-                #     augmented_image = np.array(augmented_image)  
+        if mode == 'notes' and notes is None:
+            raise ValueError("When mode is set to 'notes', you must provide notes data.")
+        elif mode == 'notes':
+            for augmentation in selected_augmentations1 + selected_augmentations2 + selected_augmentations3:
+                augmented_image, augmented_notes = augmentation(image=augmented_image, mode=mode,
+                                                                notes=augmented_notes)
+            # if isinstance(augmented_image, Image.Image):
+            #     augmented_image = np.array(augmented_image)
 
-                cv2.imwrite(aug_image_name, augmented_image)
-                return aug_image_name, augmented_notes
-            elif mode == 'img':
-                for augmentation in selected_augmentations1 + selected_augmentations2 + selected_augmentations3:
-                    print(augmentation)
-                    augmented_image = augmentation(image=augmented_image, mode=mode)
+            cv2.imwrite(aug_image_name, augmented_image)
+            return aug_image_name, augmented_notes
+        elif mode == 'img':
+            for augmentation in selected_augmentations1 + selected_augmentations2 + selected_augmentations3:
+                print(augmentation)
+                augmented_image = augmentation(image=augmented_image, mode=mode)
 
-                # if isinstance(augmented_image, Image.Image):
-                #     augmented_image = np.array(augmented_image)  
+            # if isinstance(augmented_image, Image.Image):
+            #     augmented_image = np.array(augmented_image)
 
-                cv2.imwrite(aug_image_name, augmented_image)
-                return aug_image_name
+            cv2.imwrite(aug_image_name, augmented_image)
+            return aug_image_name
 
 
+# 获取文件名称
 def get_filename_from_path(file_path):
     filename = os.path.basename(file_path)
     return filename
 
 
+# 获取文件路径
 def get_directory_from_path(file_path):
     directory = os.path.dirname(file_path)
     return directory
 
 
-def augment_image_filename(image_path: str, suffix: str = 'aug'):
+# 为增强数据命名
+def augment_image_filename(image_path: str):
     directory = get_directory_from_path(image_path)
     filename, extension = os.path.splitext(get_filename_from_path(image_path))
+    suffix = random.randint(1000, 9999)
     augmented_image_name = f"{filename}_{suffix}{extension}"
     augmented_image_path = os.path.join(directory, augmented_image_name)
     return augmented_image_path
@@ -297,17 +301,7 @@ def augment_image_filename(image_path: str, suffix: str = 'aug'):
 
 if __name__ == '__main__':
 
-    # image_path = "C:\\Users\\Username\\Documents\\image.jpg"  # 示例图片路径
-    # augmented_image_name = augment_image_filename(image_path, "aug")
-    #
-    # print("Augmented image name:", augmented_image_name)
     ImageAugment.random_combination_augment("./1.jpg")
-
-    # cv2.imwrite('/2.jpg',ImageAugment.random_bright(ImageAugment.image_read('./1.jpg')))
-   
-    # ImageAugment.random_bright(ImageAugment.image_read('./1.jpg')).save('./3.jpg')
-    # ImageAugment.random_saturation(ImageAugment.image_read('./1.jpg')).save('./4.jpg')
-    # ImageAugment.resize_image(ImageAugment.image_read('./1.jpg')).save('./5.jpg')
     cv2.imwrite('./5.jpg',ImageAugment.resize_image(ImageAugment.image_read('./1.jpg')))
     cv2.imwrite('./3.jpg',ImageAugment.random_bright(ImageAugment.image_read('./1.jpg')))
     cv2.imwrite('./4.jpg',ImageAugment.random_saturation(ImageAugment.image_read('./1.jpg')))
